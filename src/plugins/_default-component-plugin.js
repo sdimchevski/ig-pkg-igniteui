@@ -415,7 +415,7 @@ define (function (require, exports, module) {
 	        var options = meta.options;
 	        // add new prop
 	        // get the innerMarker
-	        var innerMarker = codeMarker.range;
+	        var innerMarker = codeMarker.range.find();
 	        var propStr = "";
 	        propStr += ide._tabStr(codeMarker.baseIndent + 1);
 	        var type = descriptor.propType;
@@ -451,16 +451,18 @@ define (function (require, exports, module) {
 	        if (insertInCode) {
 	            // insert the prop below, take tabs into account
 	            // need to concatenate the hash with the parent prop, if any
-	            pos.row = innerMarker.start.row + 1;
-	            pos.column = propStr.replace("\n", "").length;
-	            ide.session.insert({row: pos.row, column: 0}, propStr); // column: lastPropEndCol, instead of column: 0
+	            pos.line = innerMarker.from.line + 1;
+	            pos.ch = propStr.replace("\n", "").length;
+	          //  ide.session.insert({row: pos.row, column: 0}, propStr); // column: lastPropEndCol, instead of column: 0
+	          	ide.codemirror.replaceRange(propStr, {line: pos.line, ch: 0});
 	            var omarker = null;
 	            //pos.row;
-	            omarker = ide.createAndAddMarker(pos.row, 0, pos.row + propStr.split('\n').length - 2, propStr.replace("\n", "").length);
+	            omarker = ide.createAndAddMarker(pos.line, 0, pos.line + propStr.split('\n').length - 2, propStr.replace("\n", "").length);
 	            options[descriptor.propName].marker = omarker;
 	            // change selection so that the prop value is selected
 	        } else {
 	            // the prop is already added, just find it and return its position, also add a marker for it
+	            /*
 	            var r = ide.editor.find({
 	                needle: propStr,
 	                start: {
@@ -468,6 +470,9 @@ define (function (require, exports, module) {
 	                    column: 0
 	                }
 	            });
+				*/
+				var r = ide.codemirror.getSearchCursor(propStr, {line: innerMarker.from.line + 1, ch: 0});
+				r.find();
 	            //TODO:
 	            if (typeof (r) === "undefined" && type === "string") {
 	                // fallback
@@ -480,11 +485,11 @@ define (function (require, exports, module) {
 	                });
 	            }
 	            if (r) {
-	                omarker = ide.createAndAddMarker(r.start.row, r.start.column, r.end.row, r.end.column);
+	                omarker = ide.createAndAddMarker(r.pos.from.line, r.pos.from.ch, r.pos.to.line, r.pos.to.ch);
 	                options[descriptor.propName].marker = omarker;
 	                options[descriptor.propName].schema = descriptor.schema;
-	                pos.row = omarker.start.row;
-	                pos.column = omarker.start.column;
+	                pos.line = omarker.find().from.line;
+	                pos.ch = omarker.find().from.ch;
 	                this._addHierarchicalMarkers(descriptor, options[descriptor.propName], omarker, codeMarker.baseIndent);
 	            }
 	        }
@@ -525,13 +530,11 @@ define (function (require, exports, module) {
 		        currMarker = { };
 		        currObject = descriptor.propValue[index];
 		        objString = ide.getObjectCodeString(currObject, parentIndent + 2, schema);
-		        objRange = ide.editor.find({
-		            needle: objString,
-		            start: parentMarker.start
-		        });
+		        objRange = ide.codemirror.getSearchCursor(objString, parentMarker.from);
+		        objRange.find();
 		        if (objRange) {
-		            objMarker = ide.createAndAddMarker(objRange.start.row, objRange.start.column, objRange.end.row, objRange.end.column);
-		            currMarker.marker = objMarker;
+		            objMarker = ide.createAndAddMarker(objRange.pos.from.line, objRange.pos.from.ch, objRange.pos.to.line, objRange.pos.to.ch);
+		            currMarker.marker = objMarker.find();
 		            currMarker.schema = ide.loadSchemaList(currObject, schema);
 		            currMarker.baseIndent = parentIndent + 2;
 		            if (!parent.extraMarkers[index]) {
@@ -561,12 +564,16 @@ define (function (require, exports, module) {
 		        	} else {
 		        		propString = propName + ": " + prop;
 		        	}
+		        	/*
 		        	propRange = ide.editor.find({
 		        		needle: propString,
 		        		start: parent.marker.start
 		        	});
+					*/
+					propRange = ide.codemirror.getSearchCursor(propString, parent.marker.from);
+					propRange.find();
 		        	if (propRange) {
-		        		propMarker = ide.createAndAddMarker(propRange.start.row, propRange.start.column, propRange.end.row, propRange.end.column);
+		        		propMarker = ide.createAndAddMarker(propRange.pos.from.line, propRange.pos.from.ch, propRange.pos.to.line, propRange.pos.to.ch);
 		        		if (!parent.extraMarkers) {
 		        			parent.extraMarkers = {};
 		        		}
@@ -1253,6 +1260,7 @@ define (function (require, exports, module) {
 			return false;
 		},
 		discoverComponents: function (descriptor) {
+			/*
 			console.log("discovering ignite ui");
 			var ide = this.settings.ide, i, j;
 			var that = this;
@@ -1313,18 +1321,7 @@ define (function (require, exports, module) {
 					}
 					// otherwise add it 
 					if (!exists) {
-						/*
-						var codeMarkerStart = ide.editor.find("$(\"" + selector + "\")." + that._getWidgetName(name) + "({");
-						var codeMarkerEnd = ide.editor.find({
-							needle: "});",
-							start: codeMarkerStart.start
-						});
-						*/
 						var codeMarker = new ide.RangeClass(
-							//codeMarkerStart.start.row,
-							//codeMarkerStart.start.column,
-							//codeMarkerEnd.end.row,
-							//codeMarkerEnd.end.column
 							node.loc.start.line + sr.start.row - 1,
 							node.loc.start.column,
 							node.loc.end.line + sr.start.row - 1,
@@ -1491,6 +1488,7 @@ define (function (require, exports, module) {
 					}
 				} (i));
 			}
+			*/
 		},
 		_recreateWidget: function (element, widgetName, options) {
 			if (window.frames[0].$(element).data(widgetName)) {
