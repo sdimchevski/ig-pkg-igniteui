@@ -34,6 +34,37 @@ define (function (require, exports, module) {
 	        return "<div id=\"" + descriptor.id + "\"></div>";
 	        //return this.evalTemplate("default.html", descriptor, true);
 	    },
+	    getMVCCodeEditorMarkupSnippet: function (descriptor) {
+	    	/*
+	    	//generate the mvc code based on descriptor.options
+	    	var t = descriptor.type, i = 0, cols = descriptor.options.columns, features = descriptor.options.features, opts = descriptor.options;
+	    	var str = "@(Html.Infragistics()." + t.charAt(0).toUpperCase() + t.slice(1) + "(Model).ID(" + descriptor.id + ").Columns(column =>\n{\n";
+	    	// now for each column
+	    	//TODO: autogenerate cols true
+	    	for (i = 0; i < cols.length; i++) {
+	    		//format: column.For(x => x.ID).HeaderText("Product ID").Width("100px");
+	    		str += "\tcolumn.For(x => x." + cols[i].key + ").HeaderText(\"" + cols[i].headerText + "\").Width(\"" + cols[i].width + "px\");\n";
+	    	}
+	    	str += "\t}).Features(features =>\n";
+	    	str += "\t{\n";
+	    	for (i = 0; i < features.length; i++) {
+	    		//example format: features.Sorting().Type(OpType.Remote);
+	    		str += "\tfeatures." + features[i].name.charAt(0).toUpperCase() + features[i].name.slice(1) + "();\n"; //TODO
+	    	}
+	    	str += "\t})";
+			// chain other options here
+			for (var key in opts) {
+				if (opts.hasOwnProperty(key) && key !== "columns" && key !== "dataSource" && key !== "features") {
+					str += "." + key.charAt(0).toUpperCase() + key.slice(1) + "(\"" + opts[key] + "\")";
+				}
+			}
+			str += ";\n";
+			*/
+	    	return {
+	    		codeString: "Not implemented", 
+	    		lineCount: 1
+	    	};
+	    },
 	    getCodeEditorScriptSnippet: function (descriptor) {
 	        var code = "";
 	        var opts = descriptor.options;
@@ -405,6 +436,22 @@ define (function (require, exports, module) {
 	        ide.session.removeMarker(marker.id);
 	        var newMarker = options[descriptor.propName].marker = ide.createAndAddMarker(startRow, startCol, endRow, endColumn);
 	        this._addHierarchicalMarkers(descriptor, options[descriptor.propName], newMarker, codeMarker.baseIndent);
+
+	        //update MVC view code
+	        var mvcMarker = descriptor.component.mvcViewMarker;
+	        var newFormattedVal = descriptor.propValue;
+	        var oldFormattedVal = descriptor.oldPropValue;
+	        if (descriptor.propType === "string") {
+	        	newFormattedVal = "\"" + newFormattedVal + "\"";
+	        	oldFormattedVal = "\"" + oldFormattedVal + "\"";
+	        }
+	        var mvcPropStr = "." + descriptor.propName.charAt(0).toUpperCase() + descriptor.propName.slice(1) + "(" + newFormattedVal + ")";
+	        var res = ide.mvceditor.find({
+				needle: "." + descriptor.propName.charAt(0).toUpperCase() + descriptor.propName.slice(1) + "(" + oldFormattedVal + ")",
+				range: mvcMarker.range
+			});
+	        ide.mvcsession.replace(res, mvcPropStr);
+
 	        return { row: startRow, column: propStr.length };
 	    },
 	    addPropCode: function (descriptor, insertInCode, lastProp) {
@@ -488,6 +535,20 @@ define (function (require, exports, module) {
 	                this._addHierarchicalMarkers(descriptor, options[descriptor.propName], omarker, codeMarker.baseIndent);
 	            }
 	        }
+	        // update MVC View code
+	        var mvcMarker = descriptor.component.mvcViewMarker;
+	        if (mvcMarker) {
+		        var newFormattedVal = descriptor.propValue;
+		        if (descriptor.propType === "string") {
+		        	newFormattedVal = "\"" + newFormattedVal + "\"";
+		        }
+		        var mvcPropStr = "." + descriptor.propName.charAt(0).toUpperCase() + descriptor.propName.slice(1) + "(" + newFormattedVal + ").DataBind()";
+		        var res = ide.mvceditor.find({
+					needle: ".DataBind()",
+					range: mvcMarker.range
+				});
+		        ide.mvcsession.replace(res, mvcPropStr);
+	    	}
 	        meta.optionsCount++;
 	        //pos.row++;
 	        return pos;

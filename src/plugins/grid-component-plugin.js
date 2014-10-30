@@ -12,6 +12,47 @@ define (["./_default-component-plugin"], function (DefaultPlugin) {
 		getMarkup: function (descriptor) {
 			return "<div style=\"display:inline-block;\" id=\"" + descriptor.id + "\"></div>";
 		},
+	    getMVCCodeEditorMarkupSnippet: function (descriptor) {
+	    	//generate the mvc code based on descriptor.options
+	    	var t = descriptor.type, i = 0, cols = descriptor.options.columns, features = descriptor.options.features, opts = descriptor.options;
+	    	var str = "\n@(Html.Infragistics()." + t.charAt(0).toUpperCase() + t.slice(1) + "(Model).ID(\"" + descriptor.id + "\").Columns(column =>\n\t{\n";
+	    	var count = 2;
+	    	// now for each column
+	    	//TODO: autogenerate cols true
+	    	for (i = 0; i < cols.length; i++) {
+	    		//format: column.For(x => x.ID).HeaderText("Product ID").Width("100px");
+	    		str += "\t\tcolumn.For(x => x." + cols[i].key + ").HeaderText(\"" + cols[i].headerText + "\").Width(\"" + cols[i].width + "\");\n";
+	    		count++;
+	    	}
+	    	str += "}).Features(features =>\n";
+	    	str += "\t{\n";
+	    	count += 2;
+	    	for (i = 0; i < features.length; i++) {
+	    		//example format: features.Sorting().Type(OpType.Remote);
+	    		str += "\t\tfeatures." + features[i].name.charAt(0).toUpperCase() + features[i].name.slice(1) + "();\n"; //TODO
+	    		count++;
+	    	}
+	    	str += "\t})";
+			// chain other options here
+			for (var key in opts) {
+				if (opts.hasOwnProperty(key) && key !== "columns" && key !== "dataSource" && key !== "features") {
+					var formattedVal;
+					if (typeof (opts[key]) === "boolean") {
+						formattedVal = opts[key];
+					} else {
+						formattedVal = "\"" + opts[key] + "\"";
+					}
+					str += "." + key.charAt(0).toUpperCase() + key.slice(1) + "(" + formattedVal + ")";
+				}
+			}
+			str += ".DataBind().Render()";
+			str += "\n)\n";
+			count++;
+	    	return {
+	    		codeString: str, 
+	    		lineCount: count
+	    	};
+	    },
 		// getCodeEditorScriptSnippet: function (descriptor) {
 			// var code = "";
 			// var opts = descriptor.options;
